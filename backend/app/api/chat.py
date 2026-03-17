@@ -1,7 +1,7 @@
 from fastapi import APIRouter
 
 from app.schemas.chat import ChatRequest, ChatResponse
-from app.services.query_pipeline import normalize_query, retrieve_answer, run_query_pipeline
+from app.services.query_pipeline import normalize_query, run_query_pipeline
 
 router = APIRouter()
 
@@ -13,13 +13,11 @@ def chat(req: ChatRequest) -> ChatResponse:
 
     Current behavior (MVP):
     - Accept a user question
-    - Run a dummy pipeline (no real LLM yet)
-    - Return a simulated answer + basic "citations"
+    - Run embedding-based retrieval pipeline
+    - Return structured response
     """
     normalized = normalize_query(req.question)
-    _retrieved = retrieve_answer(normalized)
 
-    # The pipeline constructs the final structured response format.
     result = run_query_pipeline(
         question=normalized,
         user_id=req.user_id,
@@ -27,5 +25,5 @@ def chat(req: ChatRequest) -> ChatResponse:
         subject=req.subject,
         language=req.language,
     )
-    return ChatResponse(**result)
 
+    return ChatResponse(**result)

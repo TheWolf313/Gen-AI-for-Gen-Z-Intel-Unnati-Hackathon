@@ -3,6 +3,7 @@ from fastapi.middleware.cors import CORSMiddleware
 
 from app.api.chat import router as chat_router
 from app.core.config import get_settings
+from app.data.vector_store import initialize_vector_store
 
 
 def create_app() -> FastAPI:
@@ -28,6 +29,11 @@ def create_app() -> FastAPI:
     )
 
     app.include_router(chat_router, tags=["chat"])
+
+    @app.on_event("startup")
+    def _startup() -> None:
+        # Ensure the in-memory vector store is ready for queries.
+        initialize_vector_store()
 
     @app.get("/health")
     def health() -> dict:
