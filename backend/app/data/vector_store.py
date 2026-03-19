@@ -1,68 +1,109 @@
 from __future__ import annotations
 
+import json
+from pathlib import Path
 from dataclasses import dataclass
 from typing import Any
 
 _STORE = None
 
-SAMPLE_DOCS = [
-    # Photosynthesis (expanded with semantic variations + richer context)
+# Safe fallback dataset (used if JSON loading fails).
+# This keeps the app runnable even if the external dataset is missing/malformed.
+_FALLBACK_DOCS: list[dict] = [
     {
-        "text": (
-            "Photosynthesis is the process by which plants make food using sunlight, carbon dioxide, and water. "
-            "Plants use carbon dioxide and water to produce glucose (food) and release oxygen."
-        ),
+        "source": "demo-textbook",
+        "grade": "9",
+        "class_level": "9",
+        "subject": "Science",
+        "board": "State Board",
+        "book_id": "science_foundation_book_1",
         "chapter": "Plant Biology",
+        "topic": "Photosynthesis",
         "page": 12,
+        "text": "Photosynthesis is the process by which plants make food using sunlight, carbon dioxide, and water.",
     },
     {
-        "text": "Plants make their own food using sunlight in a process called photosynthesis.",
-        "chapter": "Plant Biology",
-        "page": 12,
-    },
-    {
-        "text": "Photosynthesis allows plants to produce food from sunlight, water, and carbon dioxide.",
-        "chapter": "Plant Biology",
-        "page": 12,
-    },
-    {
-        "text": "Food production in plants happens through photosynthesis.",
-        "chapter": "Plant Biology",
-        "page": 12,
-    },
-    {
-        "text": (
-            "In photosynthesis, green plants prepare their own food. "
-            "Sunlight provides energy, and carbon dioxide plus water are used to form glucose; oxygen is produced."
-        ),
-        "chapter": "Plant Biology",
-        "page": 13,
-    },
-    # Gravity (expanded with semantic variations + richer context)
-    {
-        "text": (
-            "Gravity is the force that attracts objects toward the Earth. "
-            "It makes objects fall downward and keeps planets in orbit around the Sun."
-        ),
+        "source": "demo-textbook",
+        "grade": "9",
+        "class_level": "9",
+        "subject": "Science",
+        "board": "State Board",
+        "book_id": "science_foundation_book_1",
         "chapter": "Physics Basics",
+        "topic": "Gravity",
         "page": 5,
-    },
-    {
-        "text": "Gravity pulls objects toward the Earth, which is why things fall when dropped.",
-        "chapter": "Physics Basics",
-        "page": 5,
-    },
-    {
-        "text": "The force of attraction between masses is called gravity.",
-        "chapter": "Physics Basics",
-        "page": 6,
-    },
-    {
-        "text": "Gravity is the Earth’s pulling force that acts on all objects with mass.",
-        "chapter": "Physics Basics",
-        "page": 6,
+        "text": "Gravity is the force that attracts objects toward the Earth.",
     },
 ]
+
+
+def _load_demo_dataset_from_json() -> list[dict]:
+    """
+    Load a structured textbook dataset from disk (startup time).
+
+    Expected format:
+    - JSON list of objects with at least: text, chapter, page
+    - Optional but recommended: topic, subject, grade, source
+
+    Why load at startup:
+    - Keeps request-time retrieval fast (docs already embedded and indexed).
+    - Keeps the system beginner-friendly without adding a database yet.
+
+    Why fallback exists:
+    - The app must still start even if the JSON file is missing/malformed/empty.
+    """
+    repo_root = Path(__file__).resolve().parents[3]
+    path = repo_root / "data" / "processed" / "demo_textbook.json"
+
+    try:
+        raw = path.read_text(encoding="utf-8", errors="replace")
+        data = json.loads(raw)
+        if not isinstance(data, list):
+            return []
+
+        docs: list[dict] = []
+        for idx, item in enumerate(data):
+            if not isinstance(item, dict):
+                print(f"[dataset] Skipping record #{idx}: not an object")
+                continue
+            text = str(item.get("text", "")).strip()
+            chapter = str(item.get("chapter", "")).strip()
+            page_raw = item.get("page", None)
+            try:
+                page = int(page_raw)
+            except Exception:
+                page = None
+
+            # Minimal validation.
+            if not text or not chapter or page is None:
+                print(f"[dataset] Skipping record #{idx}: missing required fields (text/chapter/page)")
+                continue
+
+            # Fill defaults for optional fields so the rest of the system stays simple.
+            source = item.get("source", "demo-textbook") or "demo-textbook"
+            subject = item.get("subject", "Science") or "Science"
+            grade = item.get("grade", "9") or "9"
+            class_level = item.get("class_level", grade) or grade
+            board = item.get("board", "State Board") or "State Board"
+            book_id = item.get("book_id", "science_foundation_book_1") or "science_foundation_book_1"
+
+            docs.append(
+                {
+                    "text": text,
+                    "chapter": chapter,
+                    "page": page,
+                    "topic": item.get("topic"),
+                    "subject": subject,
+                    "grade": grade,
+                    "class_level": class_level,
+                    "board": board,
+                    "book_id": book_id,
+                    "source": source,
+                }
+            )
+        return docs
+    except Exception:
+        return []
 
 
 def _cosine_similarity(a: list[float], b: list[float]) -> float:
@@ -111,6 +152,9 @@ class VectorStore:
     def __init__(self) -> None:
         self._docs: list[StoredDoc] = []
 
+    def clear(self) -> None:
+        self._docs = []
+
     def add_documents(self, docs: list[dict]) -> None:
         from app.llm.provider import get_embedding
 
@@ -119,7 +163,18 @@ class VectorStore:
             if not text:
                 continue
             emb = get_embedding(text)
-            md = {"chapter": d.get("chapter"), "page": d.get("page")}
+            # Preserve structured metadata so we can provide citations and support filters.
+            md = {
+                "source": d.get("source", "demo-textbook"),
+                "grade": d.get("grade"),
+                "class_level": d.get("class_level"),
+                "subject": d.get("subject"),
+                "board": d.get("board"),
+                "book_id": d.get("book_id"),
+                "chapter": d.get("chapter"),
+                "topic": d.get("topic"),
+                "page": d.get("page"),
+            }
             self._docs.append(StoredDoc(text=text, embedding=emb, metadata=md))
 
     def search(self, query: str, top_k: int = 3) -> list[dict]:
@@ -151,7 +206,14 @@ class VectorStore:
             results.append(
                 {
                     "text": doc.text,
+                    "source": doc.metadata.get("source", "demo-textbook"),
+                    "grade": doc.metadata.get("grade"),
+                    "class_level": doc.metadata.get("class_level"),
+                    "subject": doc.metadata.get("subject"),
+                    "board": doc.metadata.get("board"),
+                    "book_id": doc.metadata.get("book_id"),
                     "chapter": doc.metadata.get("chapter"),
+                    "topic": doc.metadata.get("topic"),
                     "page": doc.metadata.get("page"),
                     "score": float(score),
                 }
@@ -159,12 +221,21 @@ class VectorStore:
         return results
 
 
-def initialize_vector_store() -> VectorStore:
+def initialize_vector_store(docs: list[dict] | None = None) -> VectorStore:
     """
-    Create (or return) a global vector store instance and preload sample docs.
+    Create (or return) a global vector store instance.
+
+    If `docs` are provided, they are embedded and loaded into the store.
+    This allows us to ingest textbook content from files at startup.
     """
     global _STORE
     if _STORE is None:
         _STORE = VectorStore()
-        _STORE.add_documents(SAMPLE_DOCS)
+    if docs is None:
+        # Default startup path: load from disk with safe fallback.
+        loaded = _load_demo_dataset_from_json()
+        docs = loaded if loaded else _FALLBACK_DOCS
+
+    _STORE.clear()
+    _STORE.add_documents(docs)
     return _STORE

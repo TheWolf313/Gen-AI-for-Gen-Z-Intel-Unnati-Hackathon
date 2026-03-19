@@ -15,6 +15,11 @@ class ChatRequest(BaseModel):
     grade: str | None = Field(default=None, description="Optional grade (e.g., '9')")
     subject: str | None = Field(default=None, description="Optional subject (e.g., 'Science')")
     language: str | None = Field(default=None, description="Optional language hint (e.g., 'hi' or 'en')")
+    chapter: str | None = Field(default=None, description="Optional chapter filter (e.g., 'Plant Biology')")
+    topic: str | None = Field(default=None, description="Optional topic filter (keyword/phrase)")
+    # Optional multi-book filters (future-proofing; safe defaults if not provided).
+    book_id: str | None = Field(default=None, description="Optional book identifier filter")
+    board: str | None = Field(default=None, description="Optional board filter (e.g., 'State Board')")
 
 
 class Citation(BaseModel):

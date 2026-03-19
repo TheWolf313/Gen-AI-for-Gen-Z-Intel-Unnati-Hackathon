@@ -1,0 +1,404 @@
+<!doctype html>
+<html lang="en">
+  <head>
+    <meta charset="utf-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1" />
+    <title>AI Education Tutor (Demo)</title>
+    <style>
+      /* Minimal demo styling (no frameworks). */
+      :root {
+        --bg: #0b1020;
+        --card: #121a33;
+        --text: #e8ecff;
+        --muted: #aeb7e6;
+        --border: rgba(255, 255, 255, 0.12);
+        --accent: #6ea8ff;
+        --danger: #ff6b6b;
+      }
+      body {
+        margin: 0;
+        font-family: ui-sans-serif, system-ui, -apple-system, Segoe UI, Roboto, Arial, sans-serif;
+        background: radial-gradient(1200px 800px at 10% 10%, #162356 0%, var(--bg) 60%);
+        color: var(--text);
+      }
+      .container {
+        max-width: 960px;
+        margin: 0 auto;
+        padding: 24px;
+      }
+      .title {
+        font-size: 22px;
+        font-weight: 700;
+        margin: 0 0 6px;
+      }
+      .subtitle {
+        margin: 0 0 18px;
+        color: var(--muted);
+        font-size: 14px;
+        line-height: 1.4;
+      }
+      .grid {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 16px;
+      }
+      @media (min-width: 860px) {
+        .grid {
+          grid-template-columns: 1fr 1fr;
+        }
+      }
+      .card {
+        background: rgba(18, 26, 51, 0.9);
+        border: 1px solid var(--border);
+        border-radius: 14px;
+        padding: 16px;
+        box-shadow: 0 10px 30px rgba(0, 0, 0, 0.35);
+      }
+      label {
+        display: block;
+        font-size: 12px;
+        color: var(--muted);
+        margin: 10px 0 6px;
+      }
+      textarea,
+      select,
+      input[type="text"] {
+        width: 100%;
+        box-sizing: border-box;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        background: rgba(6, 10, 22, 0.7);
+        color: var(--text);
+        padding: 10px 12px;
+        outline: none;
+      }
+      textarea {
+        min-height: 120px;
+        resize: vertical;
+      }
+      .row {
+        display: grid;
+        grid-template-columns: 1fr 1fr;
+        gap: 10px;
+      }
+      .actions {
+        display: flex;
+        gap: 10px;
+        margin-top: 12px;
+        align-items: center;
+      }
+      button {
+        border: 1px solid rgba(110, 168, 255, 0.4);
+        background: rgba(110, 168, 255, 0.18);
+        color: var(--text);
+        padding: 10px 14px;
+        border-radius: 10px;
+        cursor: pointer;
+        font-weight: 600;
+      }
+      button:disabled {
+        opacity: 0.6;
+        cursor: not-allowed;
+      }
+      .hint {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .error {
+        color: var(--danger);
+        font-size: 13px;
+        margin-top: 10px;
+        white-space: pre-wrap;
+      }
+      .section-title {
+        font-size: 13px;
+        font-weight: 700;
+        color: var(--muted);
+        margin: 0 0 8px;
+        letter-spacing: 0.2px;
+      }
+      pre {
+        margin: 0;
+        white-space: pre-wrap;
+        word-break: break-word;
+        background: rgba(6, 10, 22, 0.55);
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 12px;
+        line-height: 1.45;
+      }
+      .pill {
+        display: inline-block;
+        padding: 3px 8px;
+        border-radius: 999px;
+        border: 1px solid var(--border);
+        background: rgba(255, 255, 255, 0.06);
+        color: var(--muted);
+        font-size: 12px;
+        margin-right: 6px;
+        margin-top: 6px;
+      }
+      .muted {
+        color: var(--muted);
+      }
+      .kvs {
+        display: grid;
+        grid-template-columns: 1fr;
+        gap: 8px;
+      }
+      .kv {
+        display: flex;
+        justify-content: space-between;
+        gap: 10px;
+        border: 1px solid var(--border);
+        border-radius: 10px;
+        padding: 10px 12px;
+        background: rgba(6, 10, 22, 0.45);
+      }
+      .kv .k {
+        color: var(--muted);
+        font-size: 12px;
+      }
+      .kv .v {
+        font-weight: 600;
+        font-size: 13px;
+      }
+      .footer {
+        margin-top: 14px;
+        color: var(--muted);
+        font-size: 12px;
+        line-height: 1.4;
+      }
+      code {
+        background: rgba(255, 255, 255, 0.06);
+        border: 1px solid var(--border);
+        padding: 2px 6px;
+        border-radius: 8px;
+      }
+    </style>
+  </head>
+  <body>
+    <div class="container">
+      <h1 class="title">AI Education Tutor (Demo)</h1>
+      <p class="subtitle">
+        Minimal frontend to call the FastAPI <code>/chat</code> endpoint.
+        Start the backend, then open this file in a browser (or serve it with any static server).
+      </p>
+
+      <div class="grid">
+        <!-- Form section: user inputs -->
+        <div class="card">
+          <div class="section-title">Ask a question</div>
+
+          <label for="question">Question</label>
+          <textarea id="question" placeholder="Example: How do plants make food?"></textarea>
+
+          <div class="row">
+            <div>
+              <label for="grade">Grade</label>
+              <select id="grade">
+                <option value="">(optional)</option>
+                <option value="5">5</option>
+                <option value="6">6</option>
+                <option value="7">7</option>
+                <option value="8">8</option>
+                <option value="9" selected>9</option>
+                <option value="10">10</option>
+                <option value="11">11</option>
+                <option value="12">12</option>
+              </select>
+            </div>
+            <div>
+              <label for="subject">Subject</label>
+              <input id="subject" type="text" value="Science" placeholder="Science / Physics / Biology..." />
+            </div>
+          </div>
+
+          <!-- Optional filters: these refine retrieval when provided -->
+          <div class="row">
+            <div>
+              <label for="chapter">Chapter (optional)</label>
+              <input id="chapter" type="text" placeholder="Example: Plant Biology" />
+            </div>
+            <div>
+              <label for="topic">Topic (optional)</label>
+              <input id="topic" type="text" placeholder="Example: photosynthesis" />
+            </div>
+          </div>
+
+          <label for="language">Language</label>
+          <select id="language">
+            <option value="en" selected>English (en)</option>
+            <option value="hi">Hindi (hi)</option>
+          </select>
+
+          <div class="actions">
+            <button id="askBtn">Ask</button>
+            <span id="status" class="hint"></span>
+          </div>
+
+          <div id="error" class="error" hidden></div>
+
+          <div class="footer">
+            Backend URL is currently hardcoded to <code>http://127.0.0.1:8000/chat</code>.
+            If your backend runs on a different port, update the <code>API_URL</code> constant below.
+          </div>
+        </div>
+
+        <!-- Results section: API output -->
+        <div class="card">
+          <div class="section-title">Result</div>
+
+          <label>Answer</label>
+          <pre id="answer" class="muted">No response yet.</pre>
+
+          <label>Citations</label>
+          <div id="citations" class="muted">—</div>
+
+          <label>Meta</label>
+          <div class="kvs">
+            <div class="kv"><div class="k">confidence</div><div class="v" id="confidence">—</div></div>
+            <div class="kv"><div class="k">cache_hit</div><div class="v" id="cacheHit">—</div></div>
+            <div class="kv"><div class="k">tokens_before</div><div class="v" id="tokensBefore">—</div></div>
+            <div class="kv"><div class="k">tokens_after</div><div class="v" id="tokensAfter">—</div></div>
+            <div class="kv"><div class="k">reduction_percent</div><div class="v" id="reductionPct">—</div></div>
+          </div>
+
+          <label>Raw JSON (debug)</label>
+          <pre id="raw" class="muted">—</pre>
+        </div>
+      </div>
+    </div>
+
+    <script>
+      // === Config ===
+      // API endpoint for the backend. Change the port if needed.
+      const API_URL = "http://127.0.0.1:8000/chat";
+
+      // === DOM helpers ===
+      const $ = (id) => document.getElementById(id);
+
+      const askBtn = $("askBtn");
+      const statusEl = $("status");
+      const errorEl = $("error");
+
+      const answerEl = $("answer");
+      const citationsEl = $("citations");
+      const confidenceEl = $("confidence");
+      const cacheHitEl = $("cacheHit");
+      const tokensBeforeEl = $("tokensBefore");
+      const tokensAfterEl = $("tokensAfter");
+      const reductionPctEl = $("reductionPct");
+      const rawEl = $("raw");
+
+      function setLoading(isLoading) {
+        askBtn.disabled = isLoading;
+        statusEl.textContent = isLoading ? "Asking..." : "";
+      }
+
+      function showError(msg) {
+        errorEl.hidden = !msg;
+        errorEl.textContent = msg || "";
+      }
+
+      function renderResponse(data) {
+        // Where results are rendered.
+        answerEl.textContent = data?.answer ?? "—";
+
+        const citations = Array.isArray(data?.citations) ? data.citations : [];
+        if (citations.length === 0) {
+          citationsEl.textContent = "—";
+        } else {
+          citationsEl.innerHTML = citations
+            .map((c) => {
+              const ch = c?.chapter ?? "N/A";
+              const pg = c?.page ?? "N/A";
+              return `<span class="pill">${escapeHtml(ch)} • p.${escapeHtml(String(pg))}</span>`;
+            })
+            .join("");
+        }
+
+        const meta = data?.meta ?? {};
+        confidenceEl.textContent = meta?.confidence ?? "—";
+        cacheHitEl.textContent = String(meta?.cache_hit ?? "—");
+
+        const tu = meta?.token_usage ?? {};
+        tokensBeforeEl.textContent = tu?.before ?? "—";
+        tokensAfterEl.textContent = tu?.after ?? "—";
+        reductionPctEl.textContent = tu?.reduction_percent != null ? `${tu.reduction_percent}%` : "—";
+
+        rawEl.textContent = JSON.stringify(data, null, 2);
+      }
+
+      function escapeHtml(s) {
+        return String(s)
+          .replaceAll("&", "&amp;")
+          .replaceAll("<", "&lt;")
+          .replaceAll(">", "&gt;")
+          .replaceAll('"', "&quot;")
+          .replaceAll("'", "&#039;");
+      }
+
+      // === API call ===
+      async function ask() {
+        showError("");
+        setLoading(true);
+
+        const question = $("question").value.trim();
+        const grade = $("grade").value.trim();
+        const subject = $("subject").value.trim();
+        const chapter = $("chapter").value.trim();
+        const topic = $("topic").value.trim();
+        const language = $("language").value.trim() || "en";
+
+        if (!question) {
+          setLoading(false);
+          showError("Please enter a question.");
+          return;
+        }
+
+        const payload = {
+          question,
+          grade: grade || null,
+          subject: subject || null,
+          language,
+        };
+        // Send chapter/topic only if provided (keeps backend behavior unchanged by default).
+        if (chapter) payload.chapter = chapter;
+        if (topic) payload.topic = topic;
+
+        try {
+          // Where the API call happens.
+          const resp = await fetch(API_URL, {
+            method: "POST",
+            headers: { "Content-Type": "application/json" },
+            body: JSON.stringify(payload),
+          });
+
+          if (!resp.ok) {
+            const text = await resp.text();
+            throw new Error(`Request failed (${resp.status}): ${text}`);
+          }
+
+          const data = await resp.json();
+          renderResponse(data);
+        } catch (err) {
+          // Basic error handling: show a readable message and keep the page stable.
+          renderResponse({ answer: "—", citations: [], meta: {}, error: String(err?.message || err) });
+          showError(String(err?.message || err));
+        } finally {
+          setLoading(false);
+        }
+      }
+
+      // Button and Enter-key support.
+      askBtn.addEventListener("click", ask);
+      $("question").addEventListener("keydown", (e) => {
+        if ((e.ctrlKey || e.metaKey) && e.key === "Enter") {
+          ask();
+        }
+      });
+    </script>
+  </body>
+</html>
+

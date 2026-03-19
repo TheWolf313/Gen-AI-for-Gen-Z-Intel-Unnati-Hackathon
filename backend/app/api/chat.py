@@ -24,6 +24,12 @@ def chat(req: ChatRequest) -> ChatResponse:
         grade=req.grade,
         subject=req.subject,
         language=req.language,
+        # Optional filters (used to prefer/restrict retrieval when provided).
+        chapter=req.chapter,
+        topic=req.topic,
+        # Optional multi-book filters (preferred when provided, safe fallback otherwise).
+        book_id=req.book_id,
+        board=req.board,
     )
 
     return ChatResponse(**result)

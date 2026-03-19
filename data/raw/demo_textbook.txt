@@ -1,0 +1,55 @@
+Chapter: Plant Biology
+Topic: Photosynthesis
+Page: 12
+Text: Photosynthesis is the process by which green plants make food using sunlight, carbon dioxide, and water. It produces glucose and releases oxygen.
+
+Chapter: Plant Biology
+Topic: Photosynthesis
+Page: 12
+Text: Plants use chlorophyll to capture sunlight energy. This energy helps convert carbon dioxide and water into glucose (food).
+
+Chapter: Plant Biology
+Topic: Photosynthesis
+Page: 13
+Text: In photosynthesis, inputs are sunlight, water, and carbon dioxide (CO₂). Outputs are glucose (food) and oxygen.
+
+Chapter: Plant Biology
+Topic: Respiration
+Page: 22
+Text: Respiration is the process by which living cells release energy from food. Cells use oxygen to break down glucose and release energy.
+
+Chapter: Plant Biology
+Topic: Respiration
+Page: 23
+Text: Plant respiration happens day and night. It uses oxygen and glucose and produces carbon dioxide, water, and energy.
+
+Chapter: Physics Basics
+Topic: Gravity
+Page: 5
+Text: Gravity is the force that attracts objects toward the Earth. It is why objects fall when dropped.
+
+Chapter: Physics Basics
+Topic: Gravity
+Page: 6
+Text: Gravity acts on objects with mass. The gravitational force increases when mass increases and decreases with distance.
+
+Chapter: Physics Basics
+Topic: Force and Motion
+Page: 14
+Text: A force is a push or pull that can change an object's motion. Force can start motion, stop motion, or change direction.
+
+Chapter: Physics Basics
+Topic: Force and Motion
+Page: 15
+Text: Motion describes a change in position over time. Speed is distance divided by time, and acceleration is change in velocity over time.
+
+Chapter: Chemistry Basics
+Topic: Atoms and Molecules
+Page: 3
+Text: An atom is the smallest unit of an element. A molecule is formed when two or more atoms join together.
+
+Chapter: Chemistry Basics
+Topic: Atoms and Molecules
+Page: 4
+Text: Elements are made of one type of atom. Compounds are made when atoms of different elements combine in fixed ratios.
+

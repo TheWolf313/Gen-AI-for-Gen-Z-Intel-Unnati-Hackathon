@@ -21,18 +21,26 @@ def create_app() -> FastAPI:
     # For the hackathon MVP we enable CORS so a simple frontend can call the API.
     # In production, restrict origins to your real domains.
     app.add_middleware(
-        CORSMiddleware,
-        allow_origins=settings.CORS_ALLOW_ORIGINS,
-        allow_credentials=True,
-        allow_methods=["*"],
-        allow_headers=["*"],
-    )
+    CORSMiddleware,
+    allow_origins=["*"],
+    allow_credentials=True,
+    allow_methods=["*"],
+    allow_headers=["*"],
+)
 
     app.include_router(chat_router, tags=["chat"])
 
     @app.on_event("startup")
     def _startup() -> None:
-        # Ensure the in-memory vector store is ready for queries.
+        """
+        Startup indexing:
+        - Load a structured dataset from disk and build the in-memory index.
+        - If disk loading fails, a safe fallback dataset is used so the app still starts.
+
+        Why load at startup:
+        - Keeps request-time retrieval fast (embeddings already computed in-memory).
+        - Avoids adding a database for the MVP.
+        """
         initialize_vector_store()
 
     @app.get("/health")
