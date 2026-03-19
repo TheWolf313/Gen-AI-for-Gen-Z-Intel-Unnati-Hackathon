@@ -145,7 +145,7 @@ This section explains how to run the project from zero on a fresh machine.
 ### 1. Clone the repository
 
 ```powershell
-git clone <your-repo-url>
+git clone https://github.com/TheWolf313/Gen-AI-for-Gen-Z-Intel-Unnati-Hackathon
 cd Gen-AI-for-Gen-Z-Intel-Unnati-Hackathon
 ```
 
