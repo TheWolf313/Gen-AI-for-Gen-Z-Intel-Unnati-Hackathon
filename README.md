@@ -1,268 +1,761 @@
+
+````markdown
 # AI-Powered Education Tutor for Remote India
 
-An AI tutoring system for rural/remote learners that ingests large state-board textbooks and provides **personalized, curriculum-aligned answers** using **context pruning** to minimize token usage, API cost, and data transfer—built for **low-bandwidth environments** by a small beginner-friendly team.
+An AI tutoring system for rural and remote learners that answers textbook-based questions using retrieval, filtering, and lightweight context pruning. The project is designed as a beginner-friendly hackathon MVP with a FastAPI backend, a minimal frontend, structured textbook data loading, caching, and curriculum-aware answers with citations.
+
+The current implementation focuses on:
+- low-cost answering through compact context selection
+- textbook-grounded responses instead of open-ended guessing
+- simple deployment and testing on a local machine
+- beginner-friendly modular structure for future upgrades
 
 ---
 
-## Core goals
+## Current Features
 
-- **Beginner-friendly**: clear modules, minimal moving parts, strong defaults.
-- **Modular + scalable**: ingestion/preprocessing separated from serving.
-- **Cost-efficient**: tight retrieval + pruning + caching.
-- **Low-bandwidth first**: small payloads, offline-friendly patterns.
+This project currently includes the following implemented features:
 
----
-
-## Step 1: Core features (purpose → how → why)
-
-### Textbook ingestion system
-- **Purpose**: Bring official textbooks (PDF/EPUB/Scans) into the system reliably.
-- **How it works**: Upload or batch-import files → store raw files → run an asynchronous pipeline that extracts text + structure + metadata → persist outputs.
-- **Why it is important**: Everything downstream (retrieval, pruning, alignment) depends on clean, stable source data; ingestion must be repeatable and auditable.
-
-### Structured content extraction (chapters, topics, examples)
-- **Purpose**: Convert books into a navigable curriculum structure (Board → Grade → Subject → Chapter → Topic → Example/Exercise).
-- **How it works**:
-  - Parse table-of-contents when available.
-  - Detect headings and boundaries (layout-aware extraction + heuristics).
-  - Tag blocks (definition/example/theorem/exercise/solution) using rules + light classification.
-  - Store a “content tree” with stable IDs and references back to original page ranges.
-- **Why it is important**: Structure enables precise retrieval and better pruning than raw text chunking.
-
-### Context pruning mechanism
-- **Purpose**: Send only the minimum sufficient context to the LLM.
-- **How it works**:
-  - Identify likely chapters/topics using a fast retrieval pass.
-  - Re-rank and filter to a small set of best sections.
-  - Compress sections into short bullet summaries + include only essential quotes.
-  - Enforce a strict token budget with a fallback (short answer + clarifying question).
-- **Why it is important**: LLM cost and latency scale with tokens; pruning is the main lever for affordability and low bandwidth.
-
-### Query processing pipeline
-- **Purpose**: Turn a user question into a structured, curriculum-aware request.
-- **How it works**:
-  - Language detection (Hindi/English/mixed) and normalization.
-  - Intent detection (definition, derivation, solve example, MCQ, etc.).
-  - Map to grade/subject/chapter from user profile + retrieval + lightweight classification.
-  - Choose response mode: short / step-by-step / exam-focused / practice.
-- **Why it is important**: Good routing reduces retrieval mistakes and prevents unnecessary context from being sent to the LLM.
-
-### Personalized response generation
-- **Purpose**: Adapt explanations to grade, language preference, and learning level.
-- **How it works**:
-  - Maintain a small user profile: grade/board/subjects, language, difficulty, past misconceptions.
-  - Use profile + intent to control style (“very simple”, “step-by-step”, “exam points”).
-  - Ground answers in retrieved content and return citations (chapter/topic/page).
-- **Why it is important**: Personalization improves learning outcomes and trust, especially with mixed language and uneven foundations.
-
-### Offline/low-bandwidth optimization (caching + lightweight responses)
-- **Purpose**: Work well with unstable connectivity and low-end devices.
-- **How it works**:
-  - Cache on server: frequent questions, embeddings, pruned contexts, final answers.
-  - Cache on device: recent answers, chapter summaries, “study cards”.
-  - Response shaping: default to concise answers + an “expand” option; small JSON payloads.
-- **Why it is important**: Reduces data transfer, improves latency, and keeps the product usable in remote areas.
-
-### Cost optimization strategies
-- **Purpose**: Keep the system affordable at scale.
-- **How it works**:
-  - Two-stage retrieval (cheap embeddings → small re-rank).
-  - Strict token budgets and compression.
-  - Aggressive caching (query→answer, query→context, chapter summaries).
-  - Model routing: smallest viable model for the task; escalate only when needed.
-  - Batch ingestion + offline preprocessing to avoid runtime costs.
-- **Why it is important**: Textbook-scale RAG gets expensive quickly without deliberate cost controls.
+- **FastAPI backend**
+- **`/chat` endpoint** for asking textbook-grounded questions
+- **`/health` endpoint** for quick backend health checking
+- **Embedding-based retrieval** over structured textbook entries
+- **Basic context pruning / token reduction reporting**
+- **Caching** with `cache_hit` in response metadata
+- **Grade-aware response formatting**
+- **Intent-aware responses**
+  - definition
+  - process
+  - inputs/outputs
+  - explanation
+  - factoid
+- **Chapter and topic filtering**
+- **Optional board and book metadata support**
+- **Structured dataset loading from JSON**
+- **Raw textbook ingestion script** for generating processed JSON
+- **Minimal frontend demo UI**
+- **Swagger API docs** for easy testing
 
 ---
 
-## Step 2: System architecture
+## What the App Currently Does
 
-### Frontend (user interaction layer)
-- **Responsibilities**:
-  - Chat UI (Hindi/English), “short vs detailed” toggle, offline view.
-  - Shows citations (chapter/topic/page) and “expand/explain more”.
-  - Local caching of recent answers and downloaded summaries (optional).
+A student enters a question such as:
 
-### Backend (API + processing logic)
-- **Responsibilities**:
-  - User profiles and basic auth (minimal in MVP).
-  - Query pipeline: normalize → retrieve → prune → generate.
-  - Caching, rate limiting, basic metrics.
-  - Async job management for ingestion (queue/worker).
+- What is photosynthesis?
+- How do plants make food?
+- What is gravity?
+- What are atoms?
 
-### Data layer (vector DB + structured storage)
-- **Structured storage (SQLite for MVP, Postgres later)**:
-  - Books, chapters, topics, content blocks, page ranges, metadata.
-  - User profiles and conversation summaries.
-- **Vector store (FAISS/Chroma)**:
-  - Embeddings for content blocks (and optionally chapter summaries).
+The system then:
 
-### LLM integration layer
-- **Responsibilities**:
-  - Unified interface for embeddings + chat models.
-  - Model routing (cheap vs better), retries, timeouts.
-  - Prompt templates for answering, summarization, compression, translation.
-
-### Preprocessing pipeline (PDF → structured data)
-- **Responsibilities**:
-  - Text extraction (layout-aware).
-  - Structure extraction (TOC/headings) + block typing.
-  - Chunking + embedding generation.
-  - Index build (vector + metadata) and quality checks.
+1. accepts the question through the API or frontend
+2. normalizes and classifies the query
+3. retrieves the most relevant textbook entries using embeddings
+4. applies filters like grade, subject, chapter, and topic when available
+5. compresses the selected evidence into a smaller answer context
+6. generates a short, curriculum-style answer
+7. returns citations and metadata such as confidence, token reduction, and cache status
 
 ---
 
-## Data flow (query → response)
+## Project Structure
 
-1. User asks a question (optionally picks subject/chapter).
-2. Backend normalizes query (language, intent, difficulty).
-3. Retrieval stage 1: embedding search returns top blocks (within board/grade/subject).
-4. Chapter/topic narrowing: aggregate scores; keep top candidate chapters/topics.
-5. Retrieval stage 2: re-rank within candidates (type-aware + optional light cross-encoder).
-6. Context pruning: select minimal blocks; compress into a tight “study context”; enforce token budget.
-7. LLM generation: answer in requested style + language, grounded with citations.
-8. Cache: store answer and pruned context; update user memory summary.
-9. Frontend: show short answer first; expand on demand; show citations and practice prompts.
-
----
-
-## Step 3: Production-grade (beginner-friendly) folder structure
-
-This repo currently contains only a minimal `README.md`. Use the following layout as the target structure.
+Below is the practical structure of the project as used in the current MVP.
 
 ```text
-/project-root
-  /backend
-    /app
-      /api              # FastAPI routes: chat, ingest, books, users
-      /core             # settings, logging, dependency injection
-      /services         # query pipeline: retrieval, pruning, generation
-      /ingestion        # PDF parsing, structure extraction, chunking, embeddings
-      /llm              # providers, prompt templates, model routing
-      /data             # SQL models, repositories, migrations, vector adapters
-      /schemas          # request/response validation models
-      /utils            # text normalization, language tools, hashing
-    /tests
-    pyproject.toml (or requirements.txt)
+Gen-AI-for-Gen-Z-Intel-Unnati-Hackathon/
+│
+├── backend/
+│   ├── app/
+│   │   ├── api/                 # FastAPI routes like /chat and /health
+│   │   ├── data/                # Vector store and dataset loading logic
+│   │   ├── ingestion/           # Raw textbook -> processed JSON pipeline
+│   │   ├── llm/                 # Embedding provider / model utilities
+│   │   ├── schemas/             # Request and response schemas
+│   │   ├── services/            # Query pipeline, retrieval, pruning, formatting
+│   │   └── main.py              # FastAPI app entry point
+│   │
+│   └── requirements.txt         # Python dependencies
+│
+├── data/
+│   ├── raw/                     # Raw textbook input files
+│   └── processed/               # Processed structured textbook JSON
+│
+├── frontend/
+│   └── index.html               # Minimal static frontend demo
+│
+├── .gitignore
+├── LICENSE
+└── README.md
+````
 
-  /frontend
-    /src
-      /components
-      /pages
-      /services         # API client, cache, connectivity detection
-      /styles
-    package.json
+### Important folders and files
 
-  /data
-    /raw                # original PDFs (gitignored)
-    /processed          # extracted structured JSON/text (gitignored)
-    /indexes            # persisted vector indexes (gitignored)
-    /cache              # cache snapshots (gitignored)
+* **`backend/app/main.py`**
+  Starts the FastAPI application and wires routes and middleware.
 
-  /docs
-    architecture.md
-    ingestion.md
-    pruning.md
-    api.md
+* **`backend/app/api/`**
+  Contains API route handlers.
 
-  /config
-    example.env         # environment template (no secrets)
+* **`backend/app/services/query_pipeline.py`**
+  Main pipeline for intent detection, retrieval, pruning, formatting, and metadata generation.
 
-  docker-compose.yml    # optional
-  .gitignore
-  LICENSE
-  README.md
+* **`backend/app/data/vector_store.py`**
+  Loads processed dataset entries, creates embeddings, and supports filtering/retrieval.
+
+* **`backend/app/ingestion/textbook_ingestor.py`**
+  Converts a raw textbook-style text file into structured JSON used by the app.
+
+* **`data/raw/`**
+  Stores raw textbook input used for ingestion.
+
+* **`data/processed/demo_textbook.json`**
+  Main processed dataset loaded by the backend.
+
+* **`frontend/index.html`**
+  Simple browser-based UI for testing the tutor.
+
+---
+
+## Requirements
+
+Install the following before running the project:
+
+* **Python 3.10 or higher** recommended
+* **pip**
+* **Git**
+* Optional:
+
+  * **VS Code**
+  * **Cursor**
+
+### Notes
+
+* On first run, the local embedding model may download from Hugging Face.
+* Internet may be required the first time for model download.
+* Later runs will be faster once the model is cached locally.
+
+---
+
+## Setup From Scratch on a New Computer
+
+This section explains how to run the project from zero on a fresh machine.
+
+### 1. Clone the repository
+
+```powershell
+git clone <your-repo-url>
+cd Gen-AI-for-Gen-Z-Intel-Unnati-Hackathon
 ```
 
-### What goes where (and why)
-- **`backend/app/ingestion/`**: heavy preprocessing stays out of request-time code; can become a worker service later.
-- **`backend/app/services/`**: pipeline brain is modular and testable (retrieve → prune → answer).
-- **`backend/app/data/`**: storage boundary (SQL + vector) stays clean and swappable.
-- **`frontend/`**: UI can evolve independently (web now, mobile later).
-- **`data/`**: big artifacts live outside git; predictable paths help ops and low-bandwidth sync.
-- **`docs/`**: reduces confusion for beginner teams; decisions are written down.
-- **`config/`**: a single obvious place for environment templates.
+Replace `<your-repo-url>` with your actual GitHub repository URL.
 
 ---
 
-## Step 4: Context pruning design (detailed)
+### 2. Create a virtual environment
 
-### 1) Remove irrelevant chapters early
-- **Hard filters**: board/grade/subject from user profile (and chapter selection if provided).
-- **Chapter narrowing**:
-  - Maintain short **chapter summaries** (embedded) to quickly identify likely chapters.
-  - Run retrieval over chapter summaries first → keep top \(K\) chapters.
-- **Why**: prevents the system from considering huge irrelevant text regions.
+Using a virtual environment is strongly recommended.
 
-### 2) Select relevant sections precisely
-- Store “blocks” with types (definition/example/exercise/derivation).
-- Retrieve top \(N\) blocks within the candidate chapters.
-- Re-rank with intent and type awareness:
-  - “solve” → examples/solutions
-  - “define” → definition blocks
-  - “derivation” → derivation/theory blocks
-- Optional: small cross-encoder re-rank for top 30–50 candidates.
-
-### 3) Compress content before LLM
-Use three tiers, always preferring the smallest:
-- **Tier A (default)**: bullet “key points” summary (definitions, formulas, steps).
-- **Tier B**: key points + a few short verbatim quotes (for exact definitions/formulas).
-- **Tier C (rare)**: small original snippets (only when necessary).
-
-Compression is ideally precomputed during ingestion (and cached if computed on-demand).
-
-### 4) Enforce token budgets
-- Hard cap: e.g., 800–1200 context tokens (tunable).
-- Greedy packing: add best blocks until budget; then replace with Tier A summaries.
-- Fail-safe: if confidence is low, answer briefly and ask **one** clarifying question.
-
-### 5) Extra token minimization
-- Summarize chat history into “student memory”; don’t send full conversation.
-- Deduplicate repeated lines across blocks.
-- Avoid bilingual duplication unless requested.
+```powershell
+python -m venv .venv
+```
 
 ---
 
-## Step 5: Tech stack (simple + realistic)
+### 3. Activate the virtual environment
 
-- **Backend**: Python + **FastAPI** (simple APIs, typing, docs).
-- **Frontend**: **React + Vite** (fast setup) or minimal HTML for the MVP.
-- **Vector DB**: **FAISS** (local, cheap) or **Chroma** (metadata + persistence).
-- **Embeddings**: open-source sentence embeddings (low cost, can run offline during ingestion); OpenAI embeddings optional.
-- **LLM**: low-cost hosted model for generation + cheaper model for summarization/compression; route by task.
+On Windows PowerShell:
 
-Why these choices:
-- Minimal infrastructure burden for a 3-person beginner team.
-- Strong cost control levers (retrieval quality + pruning + caching + routing).
-- Works in low-bandwidth settings by sending small contexts and short responses.
+```powershell
+.\.venv\Scripts\Activate.ps1
+```
 
----
+If PowerShell blocks script execution, run:
 
-## Step 6: Hackathon MVP plan
+```powershell
+Set-ExecutionPolicy -Scope Process -ExecutionPolicy Bypass
+.\.venv\Scripts\Activate.ps1
+```
 
-### Day 1–2: Basic ingestion + simple Q&A
-- Ingest 1 textbook (PDF → text blocks).
-- Store blocks with chapter/page metadata.
-- Basic chat API: retrieve top blocks and call LLM with citations.
-- Minimal UI: chat + citations.
-
-### Day 3–4: Retrieval + pruning (core innovation)
-- Add structured extraction (chapters/topics).
-- Add vector index with metadata filtering.
-- Implement pruning: chapter narrowing → block rerank → compression tiers → token budget.
-- Add caching: query→answer and chapter/topic summaries.
-
-### Day 5+: Optimization + UI
-- Low-bandwidth UX: short answer first, “expand” button, downloads for summaries.
-- Cost controls: model routing, chat summarization, better caching.
-- Basic metrics: latency, token usage, cache hit rate.
+You should then see `(.venv)` at the start of the terminal line.
 
 ---
 
-## Environment configuration (template)
+### 4. Install dependencies
 
-Create a local `.env` from `config/example.env` (never commit secrets). Suggested variables:
-- `LLM_PROVIDER`, `LLM_MODEL_PRIMARY`, `LLM_MODEL_CHEAP`
-- `EMBEDDINGS_PROVIDER`, `EMBEDDINGS_MODEL`
-- `VECTOR_STORE_PATH`
-- `DATABASE_URL`
+From the project root:
+
+```powershell
+pip install -r backend\requirements.txt
+```
+
+If your repo uses a root-level `requirements.txt`, then use that instead. For the current project structure, `backend\requirements.txt` is the safer documented path.
+
+---
+
+## How to Run the Backend
+
+### Important
+
+The backend should be started **from inside the `backend` folder**.
+
+If you run it from the wrong folder, Python import paths may fail and you may get errors like:
+
+* `No module named 'app'`
+* import errors from `app.services...`
+
+### Correct backend startup
+
+```powershell
+cd backend
+python -m uvicorn app.main:app --reload
+```
+
+### Expected result
+
+You should see something like:
+
+```text
+Uvicorn running on http://127.0.0.1:8000
+```
+
+### Useful backend URLs
+
+* **Backend server**
+  `http://127.0.0.1:8000`
+
+* **Swagger docs**
+  `http://127.0.0.1:8000/docs`
+
+* **OpenAPI JSON**
+  `http://127.0.0.1:8000/openapi.json`
+
+* **Health check**
+  `http://127.0.0.1:8000/health`
+
+---
+
+## How to Run the Frontend
+
+The frontend is a minimal static HTML page.
+
+### Recommended method
+
+Open a **new terminal** from the project root and run:
+
+```powershell
+python -m http.server 5500
+```
+
+Then open this in your browser:
+
+```text
+http://127.0.0.1:5500/frontend/index.html
+```
+
+### Important note
+
+If you open only:
+
+```text
+http://127.0.0.1:5500
+```
+
+you will just see a folder listing. That is normal. Open:
+
+```text
+http://127.0.0.1:5500/frontend/index.html
+```
+
+instead.
+
+### Backend requirement
+
+The backend must already be running on `http://127.0.0.1:8000` before the frontend can successfully send requests.
+
+---
+
+## How to Run the Ingestion Script
+
+The ingestion script converts a raw textbook-like text file into structured JSON used by the tutor.
+
+### Raw file location
+
+```text
+data/raw/demo_textbook.txt
+```
+
+### Processed output location
+
+```text
+data/processed/demo_textbook.json
+```
+
+### Run ingestion
+
+From inside the `backend` folder:
+
+```powershell
+python -m app.ingestion.textbook_ingestor
+```
+
+### Expected result
+
+* processed JSON file is created or updated
+* console should print how many entries were parsed
+* backend can then load the processed dataset automatically on startup
+
+---
+
+## How to Test the App
+
+You can test the project in two ways:
+
+1. **Swagger UI**
+2. **Frontend UI**
+
+---
+
+## Testing Through Swagger UI
+
+Open:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+Then:
+
+1. Find the `POST /chat` endpoint
+2. Click **Try it out**
+3. Paste a test JSON request
+4. Click **Execute**
+
+### Sample test JSON 1
+
+```json
+{
+  "question": "What is photosynthesis?",
+  "grade": "9",
+  "subject": "Science",
+  "language": "en"
+}
+```
+
+### Sample test JSON 2
+
+```json
+{
+  "question": "How do plants make food?",
+  "grade": "9",
+  "subject": "Science",
+  "chapter": "Plant Biology",
+  "topic": "Photosynthesis",
+  "language": "en"
+}
+```
+
+### Sample test JSON 3
+
+```json
+{
+  "question": "What is gravity?",
+  "grade": "9",
+  "subject": "Science",
+  "chapter": "Physics Basics",
+  "topic": "Gravity",
+  "language": "en"
+}
+```
+
+### Sample test JSON 4
+
+```json
+{
+  "question": "What are atoms?",
+  "grade": "9",
+  "subject": "Science",
+  "chapter": "Chemistry Basics",
+  "topic": "Atoms and Molecules",
+  "language": "en"
+}
+```
+
+### Sample test JSON 5
+
+```json
+{
+  "question": "What is quantum tunneling?",
+  "grade": "9",
+  "subject": "Science",
+  "language": "en"
+}
+```
+
+### Expected response style
+
+You should get:
+
+* a short answer
+* citations
+* metadata such as confidence
+* token usage information
+* cache hit status
+
+---
+
+## Testing Through the Frontend
+
+1. Make sure backend is running
+2. Make sure frontend server is running
+3. Open:
+
+```text
+http://127.0.0.1:5500/frontend/index.html
+```
+
+4. Fill in:
+
+   * question
+   * grade
+   * subject
+   * optional chapter
+   * optional topic
+
+5. Click **Ask**
+
+Expected result:
+
+* answer appears on screen
+* citations are shown
+* confidence and token reduction are displayed
+* repeated identical queries may return `cache_hit: true`
+
+---
+
+## Example API Request
+
+### Request
+
+```json
+{
+  "question": "What is photosynthesis?",
+  "grade": "9",
+  "subject": "Science",
+  "language": "en"
+}
+```
+
+### Example response
+
+```json
+{
+  "answer": "Photosynthesis is how green plants make food using sunlight, carbon dioxide, and water.",
+  "citations": [
+    {
+      "source": "demo-textbook",
+      "chapter": "Plant Biology",
+      "page": 12
+    }
+  ],
+  "meta": {
+    "grade": "9",
+    "subject": "Science",
+    "confidence": "medium",
+    "intent": "definition",
+    "token_usage": {
+      "before": 64,
+      "after": 21,
+      "reduction_percent": 67
+    },
+    "cache_hit": false
+  }
+}
+```
+
+---
+
+## API Endpoints
+
+### `GET /health`
+
+Used to verify that the backend is running.
+
+Typical response:
+
+```json
+{
+  "status": "ok"
+}
+```
+
+### `POST /chat`
+
+Main endpoint for asking questions.
+
+Input:
+
+* question
+* grade
+* subject
+* language
+* optional chapter
+* optional topic
+* optional board
+* optional book_id
+
+Output:
+
+* answer
+* citations
+* meta
+
+---
+
+## How the System Works Internally
+
+The current MVP pipeline works like this:
+
+1. User sends a question
+2. Query is normalized
+3. Intent is detected using lightweight rules
+4. Dataset is filtered using grade, subject, chapter, topic, and optional metadata
+5. Relevant entries are embedded and compared
+6. Top matching textbook entries are selected
+7. Context is compressed into a short answer form
+8. Final answer is shaped based on intent and grade
+9. Citations are deduplicated
+10. Metadata is added
+11. Response is cached for repeated requests
+
+---
+
+## Troubleshooting
+
+This section covers real problems that occurred during development.
+
+### 1. `uvicorn` is not recognized
+
+Error example:
+
+```text
+uvicorn : The term 'uvicorn' is not recognized...
+```
+
+### Fix
+
+Use:
+
+```powershell
+python -m uvicorn app.main:app --reload
+```
+
+instead of just:
+
+```powershell
+uvicorn app.main:app --reload
+```
+
+---
+
+### 2. `No module named 'app'`
+
+This usually happens when you run the backend from the wrong directory.
+
+### Fix
+
+Run backend from inside the `backend` folder:
+
+```powershell
+cd backend
+python -m uvicorn app.main:app --reload
+```
+
+---
+
+### 3. Frontend says `Failed to fetch`
+
+Possible reasons:
+
+* backend is not running
+* wrong frontend URL was opened
+* CORS was not configured properly
+* browser is calling the wrong backend URL
+
+### Fix checklist
+
+* confirm backend is running at `http://127.0.0.1:8000`
+* confirm docs open at `http://127.0.0.1:8000/docs`
+* confirm frontend is opened at
+  `http://127.0.0.1:5500/frontend/index.html`
+* confirm CORS is enabled in `main.py`
+
+---
+
+### 4. Opening `127.0.0.1:5500` shows only a file listing
+
+That is expected when serving from the project root.
+
+### Fix
+
+Open:
+
+```text
+http://127.0.0.1:5500/frontend/index.html
+```
+
+---
+
+### 5. First startup downloads the embedding model
+
+This is normal. The project uses a local sentence-transformer model when an external embedding API is not configured.
+
+The first run may take longer.
+
+---
+
+### 6. `/chat` says `Method Not Allowed`
+
+This happens if you open `/chat` directly in the browser using GET.
+
+### Fix
+
+`/chat` is a **POST-only** endpoint. Use:
+
+* Swagger UI
+* frontend
+* Postman
+* curl
+* any API client
+
+---
+
+### 7. Backend starts but import errors appear
+
+Most common cause:
+
+* incorrect working directory
+* partially changed imports
+* inconsistent local edits
+
+### Fix
+
+* activate virtual environment
+* ensure dependencies are installed
+* run backend from `backend/`
+* check that imports use the `app.` package path consistently
+
+---
+
+## Current Limitations
+
+This is still an MVP / hackathon-style system. Current limitations include:
+
+* textbook dataset is still demo-scale
+* full PDF ingestion pipeline is not finalized
+* no production database/authentication layer
+* retrieval and pruning are MVP quality, not production-grade
+* response generation is template/rule-driven rather than full LLM tutoring
+* Hindi is not finalized as a stable response path
+  for now, unsupported languages fall back safely to English
+* frontend is minimal and built only for demo/testing
+
+---
+
+## Planned / Future Improvements
+
+These are good next steps for future development:
+
+* full PDF textbook ingestion
+* stronger chapter/topic extraction
+* multi-book and multi-board expansion
+* better context pruning pipeline
+* multilingual response support
+* richer frontend experience
+* better confidence calibration
+* persistent database and storage
+* proper analytics and teacher/student dashboards
+* real LLM-backed answer generation where needed
+
+---
+
+## Tech Stack
+
+* **Python**
+* **FastAPI**
+* **Uvicorn**
+* **sentence-transformers**
+* **HTML / CSS / JavaScript**
+* Optional future direction:
+
+  * FAISS / Chroma
+  * SQLite / PostgreSQL
+  * hosted LLM APIs
+
+---
+
+## Environment Configuration
+
+If your project uses environment variables later, create a local `.env` file and never commit secrets.
+
+Possible future variables:
+
+* `LLM_PROVIDER`
+* `LLM_MODEL_PRIMARY`
+* `LLM_MODEL_CHEAP`
+* `EMBEDDINGS_PROVIDER`
+* `EMBEDDINGS_MODEL`
+* `VECTOR_STORE_PATH`
+* `DATABASE_URL`
+
+At the current MVP stage, local embeddings are sufficient for running the app.
+
+---
+
+## Contribution / Notes
+
+This project was built in a hackathon / MVP style with simplicity and modularity in mind. The code is intentionally structured so a beginner team can understand the flow and gradually replace mock or simplified parts with more production-ready components.
+
+The main goal of the project is not to be a full production tutoring platform yet. The current goal is to demonstrate a working, retrieval-based, low-cost educational assistant that can grow into a larger system.
+
+---
+
+## Quick Start Summary
+
+If you just want the shortest working path:
+
+### Terminal 1: backend
+
+```powershell
+cd Gen-AI-for-Gen-Z-Intel-Unnati-Hackathon\backend
+python -m uvicorn app.main:app --reload
+```
+
+### Terminal 2: frontend
+
+```powershell
+cd Gen-AI-for-Gen-Z-Intel-Unnati-Hackathon
+python -m http.server 5500
+```
+
+### Browser
+
+Open:
+
+```text
+http://127.0.0.1:5500/frontend/index.html
+```
+
+### Swagger Docs
+
+Open:
+
+```text
+http://127.0.0.1:8000/docs
+```
+
+---
+
+```
+
